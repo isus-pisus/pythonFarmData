@@ -1,12 +1,24 @@
+from dotenv import load_dotenv
+from os.path import join, dirname
 import matplotlib.pyplot as plt
 from datetime import datetime
 from sys import argv
+import argparse
 import requests
 import iso8601
 import json
-import time
+import time, os
 
-url = "http://96.43.172.104:3000/points"
+parser = argparse.ArgumentParser(description='Process data from farm API.')
+parser.add_argument('month', metavar='MMMM', type=str, help='Month to query')
+parser.add_argument('day', metavar='D', type=str, help='Day to query')
+parser.add_argument('year', metavar='YYYY', type=int, help='Year to query')
+args = parser.parse_args()
+
+dotenvPath = join(dirname(__file__), '.env')
+load_dotenv(dotenvPath)
+
+url = "http://"+str(os.environ.get("IP"))+":3000/points"
 query = argv[1]
 temperature_array = []
 time_array = []
@@ -15,8 +27,10 @@ every_hour=[]
 index_array= []
 offset_time = 60*60*5
 
-def get_raw_data():
-    raw_response = requests.get(url+"/"+argv[1]+ " " +argv[2]+", 2018")
+# make call to API and format data
+
+def processRawData():
+    raw_response = requests.get(url+"/"+args.month+ " " +args.day+", 2018")
 
     if (raw_response.ok):
         raw_data = json.loads(raw_response.content)
@@ -54,6 +68,8 @@ def get_raw_data():
 
                 break
 
+            # add the last hour index to the averaged dataArray
+
             average_temp = temperature_array[index_array[lower_limit]:index_array[upper_limit]]
             total_avg = (sum(float(total) for total in average_temp[0:len(average_temp)]))/len(average_temp)
             hourly_temp.append(round(total_avg, 2))
@@ -61,8 +77,9 @@ def get_raw_data():
             hour = time_array[index_array[lower_limit]:index_array[upper_limit]][0]
             every_hour.append(hour)
 
+# format UTC to get the hour the data was logged
 def proc_avg_temp(timestamp):
     return int(datetime.fromtimestamp(int(timestamp)).strftime('%H'))
 
 if __name__ == "__main__":
-    get_raw_data()
+    processRawData()
