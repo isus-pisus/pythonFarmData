@@ -2,16 +2,17 @@ from dotenv import load_dotenv
 from os.path import join, dirname
 import matplotlib.pyplot as plt
 from datetime import datetime
+from bson.objectid import ObjectId
 from sys import argv
 import argparse
 import requests
 import iso8601
-import json
+import json, bson
 import time, os
 
 parser = argparse.ArgumentParser(description='Process data from farm API.')
-parser.add_argument('month', metavar='MMMM', type=str, help='Month to query')
-parser.add_argument('day', metavar='D', type=str, help='Day to query')
+parser.add_argument('month', metavar='M', type=int, help='Numerical value of the month to query')
+parser.add_argument('day', metavar='D', type=int, help='Numerical value of the day to query')
 parser.add_argument('year', metavar='YYYY', type=int, help='Year to query')
 args = parser.parse_args()
 
@@ -30,16 +31,16 @@ offset_time = 60*60*5
 # make call to API and format data
 
 def processRawData():
-    raw_response = requests.get(url+"/"+args.month+ " " +args.day+", 2018")
+    raw_response = requests.get(url+"/"+str(proc_unix_time(args.month, args.day, args.year)))
 
     if (raw_response.ok):
         raw_data = json.loads(raw_response.content)
         raw_data = raw_data['data']
-
+        # print(raw_data)
         for data_points in range(len(raw_data)):
             temperature_data = raw_data[data_points]['temp']
             temperature_array.append(temperature_data)
-            hour_data = proc_avg_temp(raw_data[data_points]['createdAt'])
+            hour_data = proc_avg_temp(raw_data[data_points]['_id'])
             time_array.append(hour_data)
         max_hour=time_array[-1]+1
 
@@ -61,8 +62,6 @@ def processRawData():
 
                 plt.plot(every_hour, hourly_temp)
                 plt.ylabel('Hourly temp')
-                # plt.ylim()
-                plt.ylim(ymin=28)
                 plt.ylim(ymin=28, ymax=40)
                 plt.show()
 
@@ -79,7 +78,12 @@ def processRawData():
 
 # format UTC to get the hour the data was logged
 def proc_avg_temp(timestamp):
-    return int(datetime.fromtimestamp(int(timestamp)).strftime('%H'))
+    date_from_ObjectId = ObjectId(timestamp).generation_time.replace(tzinfo=pytz.utc).timetuple()
+    return int(date_from_ObjectId.tm_hour)
+
+def proc_unix_time(MM, D, YYYY):
+    unix_timestamp = time.mktime(datetime(int(YYYY), int(MM), int(D)).timetuple())
+    return round(unix_timestamp)
 
 if __name__ == "__main__":
     processRawData()
