@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 from os.path import join, dirname
+import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 from bson.objectid import ObjectId
@@ -54,37 +55,33 @@ def processRawData():
             list_of_index = time_array.index(hour)
             index_array.append(list_of_index)
 
-        print(index_array)
-
         for index_amount in range(0, len(index_array)):
+
             lower_limit = index_amount
             upper_limit = index_amount+1
+            hour = time_array[index_array[lower_limit]]
+            every_hour.append(hour)
+            print(every_hour)
 
-            if lower_limit == len(index_array)-1:
-                last_max = len(temperature_array)
-                average_temp = temperature_array[index_array[lower_limit]:last_max]
-                total_avg = (sum(float(total)
-                                 for total in average_temp[0:len(average_temp)]))/len(average_temp)
-                hourly_temp.append(round(total_avg, 2))
-                hour = time_array[index_array[lower_limit]:last_max][0]
-                every_hour.append(hour)
+            try:
+                """average the temperature"""
+                average_temp = np.average(
+                    temperature_array[index_array[lower_limit]:index_array[upper_limit]])
+                hourly_temp.append(round(average_temp, 2))
 
-                plt.plot(every_hour, hourly_temp)
-                plt.ylabel('Hourly temp')
-                plt.ylim(ymin=28, ymax=40)
-                plt.show()
-
+            except IndexError:
+                """Index out of range, average all the data at index 23"""
+                average_temp = np.average(
+                    temperature_array[index_array[lower_limit]:])
+                hourly_temp.append(round(average_temp, 2))
                 break
 
-            # add the last hour index to the averaged dataArray
-
-            average_temp = temperature_array[index_array[lower_limit]:index_array[upper_limit]]
-            total_avg = (sum(float(total)
-                             for total in average_temp[0:len(average_temp)]))/len(average_temp)
-            hourly_temp.append(round(total_avg, 2))
-            average_hour = time_array[index_array[lower_limit]:index_array[upper_limit]]
-            hour = time_array[index_array[lower_limit]:index_array[upper_limit]][0]
-            every_hour.append(hour)
+        print(hourly_temp)
+        print(every_hour)
+        plt.plot(every_hour, hourly_temp)
+        plt.ylabel('Hourly temp')
+        plt.ylim(ymin=28, ymax=40)
+        plt.show()
 
 # format UTC to get the hour the data was logged
 
