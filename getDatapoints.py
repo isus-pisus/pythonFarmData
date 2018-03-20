@@ -4,11 +4,16 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from bson.objectid import ObjectId
 from sys import argv
+import numpy as np
 import argparse
 import requests
-import iso8601
-import json, bson
-import time, os
+import json
+import bson
+import bson
+import time
+import pytz
+import os
+
 
 parser = argparse.ArgumentParser(description='Process data from farm API.')
 parser.add_argument('month', metavar='M', type=int, help='Numerical value of the month to query')
@@ -23,12 +28,13 @@ url = "http://"+str(os.environ.get("IP"))+":3000/points"
 query = argv[1]
 temperature_array = []
 time_array = []
-hourly_temp=[]
-every_hour=[]
-index_array= []
+hourly_temp = []
+every_hour = []
+index_array = []
 offset_time = 60*60*5
 
 # make call to API and format data
+
 
 def processRawData():
     raw_response = requests.get(url+"/"+str(proc_unix_time(args.month, args.day, args.year)))
@@ -42,20 +48,23 @@ def processRawData():
             temperature_array.append(temperature_data)
             hour_data = proc_avg_temp(raw_data[data_points]['_id'])
             time_array.append(hour_data)
-        max_hour=time_array[-1]+1
+        max_hour = time_array[-1]+1
 
         for hour in range(time_array[0], max_hour):
-            list_of_index=time_array.index(hour)
+            list_of_index = time_array.index(hour)
             index_array.append(list_of_index)
 
+        print(index_array)
+
         for index_amount in range(0, len(index_array)):
-            lower_limit=index_amount
-            upper_limit=index_amount+1
+            lower_limit = index_amount
+            upper_limit = index_amount+1
 
             if lower_limit == len(index_array)-1:
-                last_max=len(temperature_array)
+                last_max = len(temperature_array)
                 average_temp = temperature_array[index_array[lower_limit]:last_max]
-                total_avg = (sum(float(total) for total in average_temp[0:len(average_temp)]))/len(average_temp)
+                total_avg = (sum(float(total)
+                                 for total in average_temp[0:len(average_temp)]))/len(average_temp)
                 hourly_temp.append(round(total_avg, 2))
                 hour = time_array[index_array[lower_limit]:last_max][0]
                 every_hour.append(hour)
@@ -70,20 +79,26 @@ def processRawData():
             # add the last hour index to the averaged dataArray
 
             average_temp = temperature_array[index_array[lower_limit]:index_array[upper_limit]]
-            total_avg = (sum(float(total) for total in average_temp[0:len(average_temp)]))/len(average_temp)
+            total_avg = (sum(float(total)
+                             for total in average_temp[0:len(average_temp)]))/len(average_temp)
             hourly_temp.append(round(total_avg, 2))
             average_hour = time_array[index_array[lower_limit]:index_array[upper_limit]]
             hour = time_array[index_array[lower_limit]:index_array[upper_limit]][0]
             every_hour.append(hour)
 
 # format UTC to get the hour the data was logged
+
+
 def proc_avg_temp(timestamp):
-    date_from_ObjectId = ObjectId(timestamp).generation_time.replace(tzinfo=pytz.utc).timetuple()
+    date_from_ObjectId = ObjectId(timestamp).generation_time.astimezone(
+        pytz.timezone("America/Jamaica")).timetuple()
     return int(date_from_ObjectId.tm_hour)
+
 
 def proc_unix_time(MM, D, YYYY):
     unix_timestamp = time.mktime(datetime(int(YYYY), int(MM), int(D)).timetuple())
     return round(unix_timestamp)
+
 
 if __name__ == "__main__":
     processRawData()
