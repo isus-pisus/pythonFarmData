@@ -10,7 +10,6 @@ import argparse
 import requests
 import json
 import bson
-import bson
 import time
 import pytz
 import os
@@ -52,8 +51,11 @@ def processRawData():
         max_hour = time_array[-1]+1
 
         for hour in range(time_array[0], max_hour):
-            list_of_index = time_array.index(hour)
-            index_array.append(list_of_index)
+            try:
+                list_of_index = time_array.index(hour)
+                index_array.append(list_of_index)
+            except ValueError:
+                pass
 
         for index_amount in range(0, len(index_array)):
 
@@ -61,7 +63,7 @@ def processRawData():
             upper_limit = index_amount+1
             hour = time_array[index_array[lower_limit]]
             every_hour.append(hour)
-            print(every_hour)
+            # print(every_hour)
 
             try:
                 """average the temperature"""
@@ -76,13 +78,17 @@ def processRawData():
                 hourly_temp.append(round(average_temp, 2))
                 break
 
-        print(hourly_temp)
-        print(every_hour)
+        # print(hourly_temp)
+        # print(every_hour)
         plt.plot(every_hour, hourly_temp)
         plt.ylabel('Hourly temp')
         plt.ylim(ymin=28, ymax=40)
         plt.show()
 
+    return [
+        hourly_temp,
+        every_hour
+    ]
 # format UTC to get the hour the data was logged
 
 
